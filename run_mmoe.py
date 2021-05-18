@@ -79,6 +79,7 @@ if __name__ == "__main__":
     train_x = list(train_model_input.values()) + train_labels
     test_x = list(test_model_input.values()) + test_labels
 
+    # use_uncertainty=False 只返回一个model 如果还用俩接受 就会报错 not sciptable
     train_model = MMOE(dnn_feature_columns, num_tasks=2, tasks=['binary', 'binary'],
                                          use_uncertainty=False)
     def auc(y_true, y_pred):
