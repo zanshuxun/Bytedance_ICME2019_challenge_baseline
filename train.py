@@ -1,8 +1,12 @@
 import pandas as pd
+import tensorflow as tf
 from deepctr.feature_column import SparseFeat, DenseFeat, get_feature_names
 from sklearn.preprocessing import LabelEncoder, MinMaxScaler
 
 from model import xDeepFM_MTL
+
+import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 
 ONLINE_FLAG = False
 loss_weights = [1, 1, ]  # [0.7,0.3]任务权重可以调下试试
@@ -20,6 +24,7 @@ if __name__ == "__main__":
     try:
         # read data from pkl directly
         data=pd.read_pickle('data_icme19.pkl')
+        train_size = int(data.shape[0] * (1 - VALIDATION_FRAC))
         print('read_pickle ok')
     except:    
         # data = pd.read_csv('./input/final_track2_train_200.txt', sep='\t',
@@ -34,6 +39,7 @@ if __name__ == "__main__":
             data = data.append(test_data)
         else:
             train_size = int(data.shape[0] * (1 - VALIDATION_FRAC))
+
 
         data[sparse_features] = data[sparse_features].fillna('-1', )
         data[dense_features] = data[dense_features].fillna(0, )
