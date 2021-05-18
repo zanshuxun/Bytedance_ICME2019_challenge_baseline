@@ -9,32 +9,44 @@ loss_weights = [1, 1, ]  # [0.7,0.3]任务权重可以调下试试
 VALIDATION_FRAC = 0.2  # 用做线下验证数据比例
 
 if __name__ == "__main__":
-    data = pd.read_csv('./input/final_track2_train_200.txt', sep='\t',
-                       names=['uid', 'user_city', 'item_id', 'author_id', 'item_city', 'channel', 'finish', 'like',
-                              'music_id', 'did', 'creat_time', 'video_duration'])
-    if ONLINE_FLAG:
-        test_data = pd.read_csv('./input/final_track2_test_no_anwser.txt', sep='\t',
-                                names=['uid', 'user_city', 'item_id', 'author_id', 'item_city', 'channel', 'finish',
-                                       'like', 'music_id', 'did', 'creat_time', 'video_duration'])
-        train_size = data.shape[0]
-        data = data.append(test_data)
-    else:
-        train_size = int(data.shape[0] * (1 - VALIDATION_FRAC))
+    epochs=5
+    batch_size=512
 
     sparse_features = ['uid', 'user_city', 'item_id', 'author_id', 'item_city', 'channel',
                        'music_id', 'did', ]
     dense_features = ['video_duration']  # 'creat_time',
-
-    data[sparse_features] = data[sparse_features].fillna('-1', )
-    data[dense_features] = data[dense_features].fillna(0, )
-
     target = ['finish', 'like']
 
-    for feat in sparse_features:
-        lbe = LabelEncoder()
-        data[feat] = lbe.fit_transform(data[feat])
-    mms = MinMaxScaler(feature_range=(0, 1))
-    data[dense_features] = mms.fit_transform(data[dense_features])
+    try:
+        # read data from pkl directly
+        data=pd.read_pickle('data_icme19.pkl')
+        print('read_pickle ok')
+    except:    
+        # data = pd.read_csv('./input/final_track2_train_200.txt', sep='\t',
+        data = pd.read_csv('./input/final_track2_train.txt', sep='\t',
+                           names=['uid', 'user_city', 'item_id', 'author_id', 'item_city', 'channel', 'finish', 'like',
+                                  'music_id', 'did', 'creat_time', 'video_duration'])
+        if ONLINE_FLAG:
+            test_data = pd.read_csv('./input/final_track2_test_no_anwser.txt', sep='\t',
+                                    names=['uid', 'user_city', 'item_id', 'author_id', 'item_city', 'channel', 'finish',
+                                           'like', 'music_id', 'did', 'creat_time', 'video_duration'])
+            train_size = data.shape[0]
+            data = data.append(test_data)
+        else:
+            train_size = int(data.shape[0] * (1 - VALIDATION_FRAC))
+
+        data[sparse_features] = data[sparse_features].fillna('-1', )
+        data[dense_features] = data[dense_features].fillna(0, )
+
+
+        for feat in sparse_features:
+            lbe = LabelEncoder()
+            data[feat] = lbe.fit_transform(data[feat])
+        mms = MinMaxScaler(feature_range=(0, 1))
+        data[dense_features] = mms.fit_transform(data[dense_features])
+        
+        data.to_pickle('data_icme19.pkl')
+        print('to_pickle ok')
 
     fixlen_feature_columns = [SparseFeat(feat, data[feat].nunique())  for feat in sparse_features]+[DenseFeat(feat, 1) for feat in dense_features]
 
@@ -54,16 +66,22 @@ if __name__ == "__main__":
     model = xDeepFM_MTL(linear_feature_columns, dnn_feature_columns)
     # model = xDeepFM_MTL({"sparse": sparse_feature_list,
     #                      "dense": dense_feature_list})
-    model.compile("adagrad", "binary_crossentropy", loss_weights=loss_weights, )
+
+    def auc(y_true, y_pred):
+         auc = tf.metrics.auc(y_true, y_pred)[1]
+         tf.keras.backend.get_session().run(tf.local_variables_initializer())
+         return auc
+
+    model.compile("adagrad", "binary_crossentropy", metrics=['binary_crossentropy',auc], loss_weights=loss_weights, )
 
     if ONLINE_FLAG:
         history = model.fit(train_model_input, train_labels,
-                            batch_size=4096, epochs=1, verbose=1)
+                            batch_size=batch_size, epochs=epochs, verbose=1)
         pred_ans = model.predict(test_model_input, batch_size=2 ** 14)
 
     else:
         history = model.fit(train_model_input, train_labels,
-                            batch_size=4096, epochs=5, verbose=1, validation_data=(test_model_input, test_labels))
+                            batch_size=batch_size, epochs=5, verbose=1, validation_data=(test_model_input, test_labels))
 
     if ONLINE_FLAG:
         result = test_data[['uid', 'item_id', 'finish', 'like']].copy()
