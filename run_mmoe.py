@@ -7,7 +7,13 @@ from deepctr.models import MMOE
 from model import xDeepFM_MTL
 
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "3"
+os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+
+import tensorflow as tf
+# 设置GPU按需增长
+config = tf.ConfigProto()
+config.gpu_options.allow_growth = True
+sess = tf.Session(config=config)
 
 ONLINE_FLAG = False
 loss_weights = [1, 1, ]  # [0.7,0.3]任务权重可以调下试试
@@ -86,4 +92,4 @@ if __name__ == "__main__":
                         metrics=['binary_crossentropy',auc], )
 
     history = train_model.fit(train_model_input, train_labels,
-                        batch_size=batch_size, epochs=5, verbose=2, )#validation_data=(test_model_input, test_labels))
+                        batch_size=batch_size, epochs=5, verbose=1, )#validation_data=(test_model_input, test_labels))
