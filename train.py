@@ -6,7 +6,13 @@ from sklearn.preprocessing import LabelEncoder, MinMaxScaler
 from model import xDeepFM_MTL
 
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "3"
+os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+
+import tensorflow as tf
+# 设置GPU按需增长
+config = tf.ConfigProto()
+config.gpu_options.allow_growth = True
+sess = tf.Session(config=config)
 
 ONLINE_FLAG = False
 loss_weights = [1, 1, ]  # [0.7,0.3]任务权重可以调下试试
@@ -69,7 +75,7 @@ if __name__ == "__main__":
     train_labels = [train[target[0]].values, train[target[1]].values]
     test_labels = [test[target[0]].values, test[target[1]].values]
 
-    model = xDeepFM_MTL(linear_feature_columns, dnn_feature_columns)
+    model = xDeepFM_MTL(linear_feature_columns, dnn_feature_columns,dnn_hidden_units=(128, 128))
     # model = xDeepFM_MTL({"sparse": sparse_feature_list,
     #                      "dense": dense_feature_list})
 
@@ -87,7 +93,7 @@ if __name__ == "__main__":
 
     else:
         history = model.fit(train_model_input, train_labels,
-                            batch_size=batch_size, epochs=5, verbose=1, validation_data=(test_model_input, test_labels))
+                            batch_size=batch_size, epochs=epochs, verbose=1, validation_data=(test_model_input, test_labels))
 
     if ONLINE_FLAG:
         result = test_data[['uid', 'item_id', 'finish', 'like']].copy()

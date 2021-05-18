@@ -61,6 +61,9 @@ if __name__ == "__main__":
         data.to_pickle('data_icme19.pkl')
         print('to_pickle ok')
 
+    print('data.shape',data.shape)
+    print('train_size',train_size)
+
     fixlen_feature_columns = [SparseFeat(feat, data[feat].nunique())  for feat in sparse_features]+[DenseFeat(feat, 1) for feat in dense_features]
 
     dnn_feature_columns = fixlen_feature_columns
@@ -79,7 +82,6 @@ if __name__ == "__main__":
     train_x = list(train_model_input.values()) + train_labels
     test_x = list(test_model_input.values()) + test_labels
 
-    # use_uncertainty=False 只返回一个model 如果还用俩接受 就会报错 not sciptable
     train_model = MMOE(dnn_feature_columns, num_tasks=2, tasks=['binary', 'binary'],
                                          use_uncertainty=False)
     def auc(y_true, y_pred):
@@ -93,4 +95,4 @@ if __name__ == "__main__":
                         metrics=['binary_crossentropy',auc], )
 
     history = train_model.fit(train_model_input, train_labels,
-                        batch_size=batch_size, epochs=5, verbose=1, validation_data=(test_model_input, test_labels))
+                        batch_size=batch_size, epochs=epochs, verbose=1, )#validation_data=(test_model_input, test_labels))
