@@ -92,4 +92,4 @@ if __name__ == "__main__":
                         metrics=['binary_crossentropy',auc], )
 
     history = train_model.fit(train_model_input, train_labels,
-                        batch_size=batch_size, epochs=5, verbose=1, )#validation_data=(test_model_input, test_labels))
+                        batch_size=batch_size, epochs=5, verbose=1, validation_data=(test_model_input, test_labels))
